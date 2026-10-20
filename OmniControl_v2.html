@@ -1,0 +1,541 @@
+<title>OmniControl | Modular Command Center</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  :root {
+    --bg: #020617;
+    --surface: rgba(15, 23, 42, 0.8);
+    --surface-border: rgba(51, 65, 85, 0.5);
+    --fg: #f1f5f9;
+    --fg-muted: #94a3b8;
+    --accent: #60a5fa;
+    --accent-soft: rgba(96, 165, 250, 0.1);
+    --critical: #ef4444;
+    --warning: #f59e0b;
+    --success: #10b981;
+    --radius: 16px;
+    --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+
+    --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    margin: 0;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 2rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  .glass {
+    background: var(--surface);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+
+  .btn {
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    border-radius: 10px;
+    border: 1px solid transparent;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #020617;
+  }
+
+  .btn-primary:hover {
+    filter: brightness(1.2);
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(96, 165, 250, 0.4);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--fg);
+    border-color: var(--surface-border);
+  }
+
+  .btn-ghost:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  .status-pill {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .status-online { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid var(--success); }
+  .status-warn { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); }
+  .status-crit { background: rgba(239, 68, 68, 0.2); color: var(--critical); border: 1px solid var(--critical); }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.8rem 1rem;
+    color: var(--fg-muted);
+    text-decoration: none;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    margin-bottom: 4px;
+  }
+
+  .nav-item:hover, .nav-item.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+    box-shadow: inset 4px 0 0 var(--accent);
+  }
+
+  .grid-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 2rem;
+    max-width: 1600px;
+    margin: 0 auto;
+    flex-grow: 1;
+  }
+
+  /* GridStack Customizations */
+  .grid-stack-item-content {
+    background: var(--surface) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--surface-border) !important;
+    border-radius: var(--radius) !important;
+    box-shadow: var(--shadow) !important;
+    padding: 1.5rem;
+  }
+
+  .metric-value {
+    font-family: var(--font-mono);
+    font-size: 2.5rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -1px;
+  }
+
+  .node-table {
+    width: 100%;
+    text-align: left;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+  }
+
+  .node-table tr {
+    transition: all 0.2s ease;
+  }
+
+  .node-table td {
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .node-table td:first-child { border-radius: 12px 0 0 12px; }
+  .node-table td:last-child { border-radius: 0 12px 12px 0; }
+
+  .node-table tr:hover td {
+    background: rgba(255, 255, 255, 0.07);
+    transform: scale(1.005);
+  }
+
+  .output-panel {
+    margin-top: 2rem;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius) var(--radius) 0 0;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--fg-muted);
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 1rem;
+    box-shadow: 0 -4px 10px rgba(0,0,0,0.3);
+  }
+
+  .output-line {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .output-ts {
+    color: var(--accent);
+    opacity: 0.6;
+    min-width: 80px;
+  }
+
+  @media (max-width: 1100px) {
+    .grid-layout { grid-template-columns: 1fr; }
+    .side-nav { display: none; }
+  }
+</style>
+
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.344.0/lucide.min.js"></script>
+<!-- GridStack libraries for Drag & Resize -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@10.0.1/dist/gridstack.min.css">
+<script src="https://cdn.jsdelivr.net/npm/gridstack@10.0.1/dist/gridstack-all.js"></script>
+
+<div class="grid-layout">
+  <aside class="side-nav flex flex-col gap-8">
+    <div class="flex items-center gap-4 px-4 py-2">
+      <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
+        <i data-lucide="cpu" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h2 class="text-xl font-bold leading-none">OmniControl</h2>
+        <p class="text-[10px] uppercase tracking-widest opacity-40 font-bold mt-1">Modular Core v3.0</p>
+      </div>
+    </div>
+
+    <nav class="flex flex-col">
+      <a href="#overview" class="nav-item active" onclick="switchTab('overview')">
+        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+        <span>Command Center</span>
+      </a>
+      <a href="#media" class="nav-item" onclick="switchTab('media')">
+        <i data-lucide="play-circle" class="w-5 h-5"></i>
+        <span>Media Portal</span>
+      </a>
+      <a href="#logs" class="nav-item" onclick="switchTab('logs')">
+        <i data-lucide="activity" class="w-5 h-5"></i>
+        <span>Live Telemetry</span>
+      </a>
+      <a href="#settings" class="nav-item" onclick="switchTab('settings')">
+        <i data-lucide="settings" class="w-5 h-5"></i>
+        <span>Kernel Config</span>
+      </a>
+    </nav>
+
+    <div class="mt-auto glass p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+        <span class="text-xs font-bold uppercase opacity-60">Uplink Active</span>
+      </div>
+      <div class="space-y-2">
+        <div class="flex justify-between text-[11px] opacity-60">
+          <span>Ping</span>
+          <span class="font-mono">14ms</span>
+        </div>
+        <div class="flex justify-between text-[11px] opacity-60">
+          <span>Load Avg</span>
+          <span class="font-mono">0.42, 0.81, 1.12</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="flex flex-col gap-8">
+    <header class="flex justify-between items-center">
+      <div>
+        <h1 class="text-3xl tracking-tight">System Orchestration</h1>
+        <p class="text-slate-400 text-sm mt-1">Welcome back, Hoss. Dashboard is now modular.</p>
+      </div>
+      <div class="flex gap-3">
+        <button class="btn btn-ghost" onclick="alert('Theme toggle is system-aware by default.')">
+          <i data-lucide="moon" class="w-4 h-4"></i>
+          <span>Appearance</span>
+        </button>
+        <button class="btn btn-primary" onclick="deployNode()">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>Deploy New Node</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Tab: Overview (Now a Modular Grid) -->
+    <div id="tab-overview" class="tab-content space-y-8">
+      <div class="grid-stack">
+        <!-- CPU Widget -->
+        <div class="grid-stack-item" gs-w="4" gs-h="2">
+          <div class="grid-stack-item-content flex flex-col justify-between">
+            <div class="flex justify-between items-start">
+              <span class="text-xs font-bold uppercase opacity-50 tracking-wider">CPU Load</span>
+              <i data-lucide="zap" class="w-4 h-4 text-blue-400"></i>
+            </div>
+            <div class="metric-value" id="cpu-val">32<span class="text-lg opacity-40 font-normal">%</span></div>
+            <div class="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+              <div id="cpu-bar" class="bg-blue-500 h-full transition-all duration-500" style="width: 32%"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Memory Widget -->
+        <div class="grid-stack-item" gs-w="4" gs-h="2">
+          <div class="grid-stack-item-content flex flex-col justify-between">
+            <div class="flex justify-between items-start">
+              <span class="text-xs font-bold uppercase opacity-50 tracking-wider">Memory Use</span>
+              <i data-lucide="database" class="w-4 h-4 text-purple-400"></i>
+            </div>
+            <div class="metric-value" id="mem-val">8.2<span class="text-lg opacity-40 font-normal">GB</span></div>
+            <div class="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+              <div id="mem-bar" class="bg-purple-500 h-full transition-all duration-500" style="width: 45%"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Network Widget -->
+        <div class="grid-stack-item" gs-w="4" gs-h="2">
+          <div class="grid-stack-item-content flex flex-col justify-between">
+            <div class="flex justify-between items-start">
+              <span class="text-xs font-bold uppercase opacity-50 tracking-wider">Network I/O</span>
+              <i data-lucide="globe" class="w-4 h-4 text-green-400"></i>
+            </div>
+            <div class="metric-value" id="net-val">142<span class="text-lg opacity-40 font-normal">Mbps</span></div>
+            <div class="flex items-center gap-2 text-[10px] text-green-400 font-bold">
+              <i data-lucide="trending-up" class="w-3 h-3"></i>
+              <span>STABLE UPLINK</span>
+            </div>
+          </div>
+        </div>
+        <!-- Node Table Widget -->
+        <div class="grid-stack-item" gs-w="12" gs-h="6">
+          <div class="grid-stack-item-content overflow-hidden flex flex-col">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-lg">Infrastructure Grid</h3>
+              <div class="flex gap-3">
+                <span class="text-xs opacity-50 flex items-center gap-1">
+                  <div class="w-2 h-2 rounded-full bg-green-500"></div> Online
+                </span>
+                <span class="text-xs opacity-50 flex items-center gap-1">
+                  <div class="w-2 h-2 rounded-full bg-yellow-500"></div> Degraded
+                </span>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="node-table">
+                <thead class="text-[11px] uppercase tracking-widest opacity-30">
+                  <tr>
+                    <th class="px-4 py-2">Identifier</th>
+                    <th class="px-4 py-2">Status</th>
+                    <th class="px-4 py-2">Load</th>
+                    <th class="px-4 py-2">Uptime</th>
+                    <th class="px-4 py-2 text-right">Control</th>
+                  </tr>
+                </thead>
+                <tbody id="node-list">
+                  <!-- Nodes injected by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <!-- AI Response Hub Widget -->
+        <div class="grid-stack-item" gs-w="6" gs-h="4">
+          <div class="grid-stack-item-content flex flex-col gap-4">
+            <h3 class="text-lg flex items-center gap-2">
+              <i data-lucide="message-circle" class="w-5 h-5 text-blue-400"></i>
+              AI Response Hub
+            </h3>
+            <textarea id="ai-responses" placeholder="Paste Eri's responses here for quick reference..." class="w-full h-full p-4 rounded-lg bg-slate-900 border border-slate-700 text-xs outline-none focus:ring-1 ring-blue-500 font-mono resize-none"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Media Portal -->
+    <div id="tab-media" class="tab-content hidden space-y-6">
+      <div class="flex justify-between items-center">
+        <h2 class="text-2xl">Media Portal</h2>
+        <div class="flex gap-3">
+          <button class="btn btn-ghost text-xs" onclick="window.open('https://www.youtube.com', '_blank')">
+            <i data-lucide="external-link" class="w-4 h-4"></i>
+            <span>Open YT Home</span>
+          </button>
+          <input type="text" id="yt-url" placeholder="Paste YouTube URL..." class="px-4 py-2 rounded-lg bg-slate-900 border border-slate-700 text-sm outline-none focus:ring-1 ring-blue-500 w-64">
+          <button class="btn btn-primary" onclick="loadVideo()">Load Stream</button>
+        </div>
+      </div>
+      <div class="glass aspect-video w-full overflow-hidden relative bg-black">
+        <iframe id="yt-player" class="absolute inset-0 w-full h-full" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <div id="media-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
+          <i data-lucide="play-circle" class="w-16 h-16 mb-4 opacity-20"></i>
+          <p>Enter a URL to begin the ad-light stream</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Other tabs (Placeholder for expansion) -->
+    <div id="tab-nodes" class="tab-content hidden glass p-12 text-center">
+      <i data-lucide="server" class="w-12 h-12 mx-auto mb-4 opacity-20"></i>
+      <h2 class="text-2xl mb-2">Infrastructure Detail View</h2>
+      <p class="text-slate-400">Full node topology mapping is being initialized...</p>
+    </div>
+    <div id="tab-logs" class="tab-content hidden glass p-12 text-center">
+      <i data-lucide="activity" class="w-12 h-12 mx-auto mb-4 opacity-20"></i>
+      <h2 class="text-2xl mb-2">Live Telemetry Stream</h2>
+      <p class="text-slate-400">Connecting to system event bus...</p>
+    </div>
+    <div id="tab-settings" class="tab-content hidden glass p-12 text-center">
+      <i data-lucide="settings" class="w-12 h-12 mx-auto mb-4 opacity-20"></i>
+      <h2 class="text-2xl mb-2">Kernel Configuration</h2>
+      <p class="text-slate-400">Accessing protected system registry...</p>
+    </div>
+  </main>
+  <div class="output-panel" id="system-output">
+    <div class="output-line">
+      <span class="output-ts">[BOOT]</span>
+      <span class="text-blue-400">OmniControl Kernel initialized. Modular grid active.</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Initialize GridStack
+  let grid = GridStack.init({
+    cellHeight: 100,
+    margin: 1.5,
+    animate: true
+  });
+
+  lucide.createIcons();
+
+  const nodes = [
+    { id: 'alpha-node-01', status: 'online', load: '12%', uptime: '14d 2h' },
+    { id: 'beta-node-04', status: 'warn', load: '89%', uptime: '2d 18h' },
+    { id: 'gamma-node-09', status: 'crit', load: '0%', uptime: '0s' },
+    { id: 'delta-node-12', status: 'online', load: '44%', uptime: '5d 1h' },
+  ];
+
+  function renderNodes() {
+    const list = document.getElementById('node-list');
+    list.innerHTML = nodes.map(node => `
+      <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+        <td class="px-4 py-4 font-mono text-sm font-bold">${node.id}</td>
+        <td class="px-4 py-4">
+          <span class="status-pill status-${node.status}">${node.status}</span>
+        </td>
+        <td class="px-4 py-4 text-sm font-mono">${node.load}</td>
+        <td class="px-4 py-4 text-sm opacity-60">${node.uptime}</td>
+        <td class="px-4 py-4 text-right">
+          <button class="btn btn-ghost p-2" onclick="restartNode('${node.id}')" title="Restart">
+            <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+    lucide.createIcons();
+  }
+
+  function writeOutput(message, type = 'INFO') {
+    const panel = document.getElementById('system-output');
+    const ts = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const line = document.createElement('div');
+    line.className = 'output-line';
+
+    let colorClass = 'text-slate-400';
+    if (type === 'SUCCESS') colorClass = 'text-green-400';
+    if (type === 'WARN') colorClass = 'text-yellow-400';
+    if (type === 'CRIT') colorClass = 'text-red-400';
+    if (type === 'SYS') colorClass = 'text-blue-400';
+
+    line.innerHTML = `<span class="output-ts">[${ts}]</span><span class="${colorClass}">${message}</span>`;
+    panel.appendChild(line);
+    panel.scrollTop = panel.scrollHeight;
+  }
+
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+    document.getElementById('tab-' + tabId).classList.remove('hidden');
+
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+
+    if (tabId === 'overview') {
+      // Re-layout grid when coming back to overview
+      grid.onParentResize();
+    }
+  }
+
+  function restartNode(id) {
+    writeOutput(`Initiating restart sequence for ${id}...`, 'WARN');
+    setTimeout(() => writeOutput(`Node ${id} is rebooting.`, 'INFO'), 1000);
+    setTimeout(() => writeOutput(`Node ${id} back online.`, 'SUCCESS'), 3000);
+    alert(`Sending restart signal to ${id}... Node is rebooting.`);
+  }
+
+  function deployNode() {
+    const id = `node-${Math.floor(Math.random()*1000)}`;
+    nodes.push({ id: id, status: 'online', load: '0%', uptime: '0s' });
+    renderNodes();
+    writeOutput(`Deployed new resource: ${id}`, 'SUCCESS');
+    alert(`Successfully deployed ${id} to the cluster.`);
+  }
+
+  function loadVideo() {
+    const urlInput = document.getElementById('yt-url').value;
+    const player = document.getElementById('yt-player');
+    const placeholder = document.getElementById('media-placeholder');
+
+    if (!urlInput) return;
+
+    let videoId = '';
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = urlInput.match(regExp);
+    if (match && match[2].length === 11) {
+      videoId = match[2];
+    } else {
+      alert('Invalid YouTube URL');
+      return;
+    }
+
+    player.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`;
+    placeholder.classList.add('hidden');
+  }
+
+  setInterval(() => {
+    const cpu = Math.floor(Math.random() * 100);
+    const mem = (Math.random() * 32).toFixed(1);
+    const net = Math.floor(Math.random() * 1000);
+
+    const cpuVal = document.getElementById('cpu-val');
+    if (cpuVal) {
+      cpuVal.innerHTML = `${cpu}<span class="text-lg opacity-40 font-normal">%</span>`;
+      document.getElementById('cpu-bar').style.width = `${cpu}%`;
+    }
+
+    const memVal = document.getElementById('mem-val');
+    if (memVal) {
+      memVal.innerHTML = `${mem}<span class="text-lg opacity-40 font-normal">GB</span>`;
+      document.getElementById('mem-bar').style.width = `${(mem/32)*100}%`;
+    }
+
+    const netVal = document.getElementById('net-val');
+    if (netVal) {
+      netVal.innerHTML = `${net}<span class="text-lg opacity-40 font-normal">Mbps</span>`;
+    }
+  }, 3000);
+
+  renderNodes();
+</script>
